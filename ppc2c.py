@@ -994,7 +994,7 @@ def crxor(ea, g_mnem, g_BD, g_BA, g_BB):
 
 	return g_BD + " = " + g_BA + " ^ " + g_BB
 
-def crclr(ea, g_mnem, g_BD, g_BA, g_BB):
+def crclr(ea, g_mnem, g_BD):
 	
 	# Condition Register CLEAR
 
