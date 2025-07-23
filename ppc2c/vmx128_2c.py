@@ -28,7 +28,7 @@ def vmsum4fp128(vD, vA, vB):
 
 def vnmsubfp128(vD, vA, vB):
 
-	return "v{:d}[4xfloat] = (v{:d} * v{:d}) - v{:d}".format(vD, vA, vD, vB)
+	return "v{:d}[4xfloat] = -((v{:d} * v{:d}) - v{:d})".format(vD, vA, vD, vB)
 
 def vpermwi128(vD, vB, vPerm):
 

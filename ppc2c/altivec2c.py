@@ -529,7 +529,7 @@ def vmulouh(vD, vA, vB):
 
 def vnmsubfp(vD, vA, vB, vC):
 
-	return "v{:d}[4xfloat] = (v{:d} * v{:d}) - v{:d}".format(vD, vA, vC, vB)
+	return "v{:d}[4xfloat] = -((v{:d} * v{:d}) - v{:d})".format(vD, vA, vC, vB)
 
 def vnor(vD, vA, vB):
 

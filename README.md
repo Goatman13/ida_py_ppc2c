@@ -51,7 +51,7 @@ Examples
 
 	Altivec:
 	vmaddfp   v13, v14, v14, v13 # v13[4xfloat] = (v14 * v13) + v14
-	vnmsubfp  v14, v13, v10, v12 # v14[4xfloat] = (v13 * v12) - v10
+	vnmsubfp  v14, v13, v10, v12 # v14[4xfloat] = -((v13 * v12) - v10)
 	
 	VMX128:
 	vspltw128 v0, v43, 2         # v0[4x32b] = v43[2].word
