@@ -10,6 +10,9 @@ import ida_ida
 import idaapi
 import ida_bytes
 import idc
+import ppc2c.altivec2c
+import ppc2c.vmx128_2c
+import ppc2c.gekko2c
 
 SIMPLIFY  = 1
 MASK32_ALLSET   = 0xFFFFFFFF
@@ -936,7 +939,34 @@ def mfocrf(ea, g_mnem, g_RT, g_FXM):
 		else:
 			return 0
 	return ".\n" + g_RT + string
+
+def mtocrf(ea, g_mnem, g_FXM, g_RS):
 	
+	# Move from One Condition Register Field
+	# mfocrf RT, FXM
+
+	#FXM is passed as str
+	g_FXM  = int(g_FXM, 16)
+	if ida_ida.inf_get_procname() != "ppcl":
+		if g_FXM & 0x01 != 0:
+			return "cr7 = " + g_RS + " & 0x0000000F (1 = LT, 2 = GT, 4 = EQ, 8 = SO)"
+		elif g_FXM & 0x02 != 0:
+			return "cr6 = " + g_RS + " & 0x000000F0 (1 = LT, 2 = GT, 4 = EQ, 8 = SO)"
+		elif g_FXM & 0x04 != 0:
+			return "cr5 = " + g_RS + " & 0x00000F00 (1 = LT, 2 = GT, 4 = EQ, 8 = SO)"
+		elif g_FXM & 0x08 != 0:
+			return "cr4 = " + g_RS + " & 0x0000F000 (1 = LT, 2 = GT, 4 = EQ, 8 = SO)"
+		elif g_FXM & 0x10 != 0:
+			return "cr3 = " + g_RS + " & 0x000F0000 (1 = LT, 2 = GT, 4 = EQ, 8 = SO)"
+		elif g_FXM & 0x20 != 0:
+			return "cr2 = " + g_RS + " & 0x00F00000 (1 = LT, 2 = GT, 4 = EQ, 8 = SO)"
+		elif g_FXM & 0x40 != 0:
+			return "cr1 = " + g_RS + " & 0x0F000000 (1 = LT, 2 = GT, 4 = EQ, 8 = SO)"
+		elif g_FXM & 0x80 != 0:
+			return "cr0 = " + g_RS + " & 0xF0000000 (1 = LT, 2 = GT, 4 = EQ, 8 = SO)"
+		else:
+			return 0
+
 	#LE new impl
 	#if g_FXM & 0x01 != 0:
 	#	string = " = (cr7 << 28) & 0xF0000000\nbit0 = LT, bit1 = GT, bit2 = EQ, bit3 = SO"
@@ -1069,7 +1099,7 @@ def PPCAsm2C(ea):
 	accepted = ["clrlwi", "clrldi", "clrrwi", "clrrdi", "clrlslwi", "clrlsldi",
 				"extlwi", "extldi", "extrwi", "extrdi", "inslwi", "insrwi", "insrdi",
 				"rlwinm", "rlwnm", "rotlw", "rotlwi", "rotrwi", "rotldi", "rotld", "rotrdi", "slwi", "srwi", "sldi",
-				"srdi", "rldcr", "rldic", "rldicl", "rldicr", "rldimi", "rlwimi", "mfocrf", "mfcr",
+				"srdi", "rldcr", "rldic", "rldicl", "rldicr", "rldimi", "rlwimi", "mfocrf", "mtocrf", "mfcr",
 				"crnor", "crnot", "crandc", "crxor", "crclr", "crnand", "crand", "creqv", "crset", "crorc", "cror", "crmove"]
 	for x in accepted:
 		if (g_mnem == x):
@@ -1105,7 +1135,7 @@ def PPCAsm2C(ea):
 		g_opnd_s3 = int(g_opnd_s3)
 	
 	# convert s2 to int, except when s2 is reg nr.
-	if (g_mnem not in ["rldcr", "rotlw",  "rotld", "rlwnm", "mfocrf", "mfcr",
+	if (g_mnem not in ["rldcr", "rotlw",  "rotld", "rlwnm", "mfocrf", "mtocrf", "mfcr",
 						"crnor", "crnot", "crandc", "crxor", "crclr", "crnand", 
 						"crand", "creqv", "crset", "crorc", "cror", "crmove"]):
 		g_opnd_s2 = int(g_opnd_s2)
@@ -1193,6 +1223,8 @@ def PPCAsm2C(ea):
 	# cr operations
 	elif(g_mnem == "mfocrf"):
 		return mfocrf(ea, g_mnem, g_opnd_s0, g_opnd_s1)
+	elif(g_mnem == "mtocrf"):
+		return mtocrf(ea, g_mnem, g_opnd_s0, g_opnd_s1)
 	elif(g_mnem == "mfcr"):
 		return mfcr(ea, g_mnem, g_opnd_s0)
 	elif(g_mnem == "crnor"):
@@ -1230,9 +1262,34 @@ def run_task(start_addr, end_addr, always_insert_comment):
 		print_str = PPCAsm2C(addr)
 		if(print_str != 0 and print_str != 1):
 			set_cmt(addr, print_str, False)
-		elif (print_str == 0 and always_insert_comment == True):
-			msg("0x{:X}: Error converting PPC to C code\n".format(addr))
-		addr += 4
+		elif (print_str == 0):
+			try:
+				print_str = ppc2c.altivec2c.AltivecAsm2C(addr)
+			except:
+				print_str = 0
+				msg("[ppc2c]: WARNING! Issue occured in altivec2c.py file!\n[ppc2c]: Altivec/VMX can't be interpreted!")
+			if(print_str != 0):
+				set_cmt(addr, print_str, False)
+			elif (print_str == 0):
+				try:
+					print_str = ppc2c.gekko2c.GekkoAsm2C(addr)
+				except:
+					print_str = 0
+					msg("[ppc2c]: WARNING! Issue occured in gekko2c.py file!\n[ppc2c]: Gekko paired singles instructions can't be interpreted!")
+				if(print_str != 0):
+					set_cmt(addr, print_str, False)
+				elif (print_str == 0):
+					try:
+						print_str = ppc2c.vmx128_2c.Vmx128Asm2C(addr)
+					except:
+						print_str = 0
+						msg("[ppc2c]: WARNING! Issue occured in vmx128_2c.py file is missing!\n[ppc2c]: VMX128 can't be interpreted!")
+					if(print_str != 0):
+						set_cmt(addr, print_str, False)
+					if(print_str == 0 and always_insert_comment == True):
+						msg("[ppc2c]: At address: 0x{:X}. Error converting PPC to C code\n".format(addr))
+
+		addr += 4 
 
 
 def PluginMain():
@@ -1345,14 +1402,13 @@ class ppc_helper_t(idaapi.plugin_t):
 	def init(self):
 		if (idaapi.ph.id == idaapi.PLFM_PPC):
 			register_actions()
-			idaapi.msg("pypyc2c: loaded\n")
+			idaapi.msg("[ppc2c]: loaded\n")
 			return idaapi.PLUGIN_KEEP
 
 		return idaapi.PLUGIN_SKIP
 	
 	def run(self, arg):
-		idaapi.msg("pypyc2c: run\n")
-	
+		pass
 	def term(self):
 		pass
 

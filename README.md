@@ -2,6 +2,10 @@
 PowerPC to C plugin for IDA converted to python.
 - Modified version of Zak Stanborough's PPC2C plugin released as part of [Hex-Rays Plug-In Contest 2009](https://www.hex-rays.com/contests/2009/).
 
+Instalation
+-------
+- Place file ppc2c.py and ppc2c folder inside IDA plugins folder, restart IDA.
+
 Changes
 -------
 
@@ -13,6 +17,9 @@ Changes
 - Added cr manipulation opcodes.
 - New SIMPLIFY option to detect opcode pairs that can be used as advanced "and"/"and not" (enabled by default).
 - More minor changes here and there.
+- Added Altivec/VMX support.
+- Added VMX128 (Xbox 360 Xenon) support.
+- Added Paired Singles (GC/Wii Gekko) support.
 
  To scan single opcode push F10.
  To scan multiple opcodes, mark them with mouse, and push F10.
@@ -41,3 +48,29 @@ Examples
 	
 	Warning! SIMPLIFY option edit comment for both locations.
 	Regardless on which opcode of those 2 ida_py_ppc2c was used.
+
+	Altivec:
+	vmaddfp   v13, v14, v14, v13 # v13[4xfloat] = (v14 * v13) + v14
+	vnmsubfp  v14, v13, v10, v12 # v14[4xfloat] = (v13 * v12) - v10
+	
+	VMX128:
+	vspltw128 v0, v43, 2         # v0[4x32b] = v43[2].word
+	vpermwi128 v13, v13, 7       # v13[128b] = v13: AAAAAAAA:AAAAAAAA:BBBBBBBB:DDDDDDDD
+	vrlimi128 v11, v8, 0xC, 0    # .
+	                             # v11[0].word = v8[0].word
+	                             # v11[1].word = v8[1].word
+	                             # v11[2].word = v11[2].word
+	                             # v11[3].word = v11[3].word
+	
+	Paired Singles:
+	ps_madd   f13, f5, f7, f12 # f13[2xfloat] = (f5 * f7) + f12
+	ps_merge00 f2, f2, f4      # f2[0] = f2[0], f2[1] = f4[0]
+	ps_muls0  f8, f8, f0       # .
+	                           # f8[0] = f8[0] * f0[0]
+	                           # f8[1] = f8[1] * f0[0]
+	ps_muls0. f10, f10, f0     # .
+	                           # f10[0] = f10[0] * f0[0]
+	                           # f10[1] = f10[1] * f0[0]
+	                           # cr1[lt,gt,eq,so] = fpscr[fx,fex,vx,ox]
+
+Old standalone version of plugin (without SIMD support) is available here: https://github.com/Goatman13/ida_py_ppc2c/tree/last_standalone
